@@ -32,3 +32,4 @@ You can find more usage examples in `src/bin`.
 * Better/complete error handling
 * Automatic integration tests
 * Support fetching and updating bids
+* Add lightning abstraction layer to support `lnd` and `c-lightning` and at some point `rust-lightning`
