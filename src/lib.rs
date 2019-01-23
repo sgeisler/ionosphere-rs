@@ -6,6 +6,7 @@ extern crate serde_derive;
 extern crate url;
 
 use clightningrpc::LightningRPC;
+use std::io::Read;
 use std::path::Path;
 use url::Url;
 
@@ -44,8 +45,29 @@ pub struct NodeAddress {
     pub port: u16
 }
 
-pub struct NewOrder {
-    pub bid: u64,
+#[derive(Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Deserialize)]
+#[serde(untagged)]
+enum OrderResponse {
+    Success {
+        auth_token: String,
+        uuid: String,
+        lightning_invoice: Invoice,
+    },
+    Error {
+        message: String,
+        errors: Vec<String>
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Deserialize)]
+struct Invoice {
+    pub payreq: String,
+}
+
+#[derive(Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct Order {
+    pub uuid: String,
+    pub auth_token: String,
 }
 
 impl IonosphereClient {
@@ -89,11 +111,87 @@ impl IonosphereClient {
             None
         )?)
     }
+
+    pub fn place_bid<P: AsRef<Path>>(
+        &mut self,
+        file_path: P,
+        bid_msat: u64
+    ) -> Result<Order, Error> {
+        let file_name = match file_path.as_ref().file_name().and_then(|name| name.to_str()) {
+            Some(name) => name.to_owned(),
+            None => return Err(Error::FileNameError),
+        };
+        let file = std::fs::File::open(file_path)?;
+
+        self.place_bid_reader(
+            file,
+            &file_name,
+            bid_msat
+        )
+    }
+
+    pub fn place_bid_reader<T: Read + Send + 'static>(
+        &mut self,
+        data: T,
+        file_name: &str,
+        bid_msat: u64
+    ) -> Result<Order, Error> {
+        let url = self.endpoint.join("order")
+            .expect("should always work if endpoint is valid");
+
+        let file = reqwest::multipart::Part::reader(data)
+            .file_name(file_name.to_owned());
+
+        let form = reqwest::multipart::Form::new()
+            .text("bid", bid_msat.to_string())
+            .part("file", file);
+
+        let response: OrderResponse = self.client.post(url)
+            .multipart(form)
+            .send()?
+            .json()?;
+
+        match response {
+            OrderResponse::Success {
+                auth_token,
+                uuid,
+                lightning_invoice,
+            } => {
+                let Invoice { payreq } = lightning_invoice;
+
+                let pay_options = clightningrpc::lightningrpc::PayOptions {
+                    msatoshi: None,
+                    description: None,
+                    riskfactor: None,
+                    maxfeepercent: None,
+                    exemptfee: None,
+                    retry_for: None,
+                    maxdelay: None
+                };
+
+                self.ligthningd.pay(payreq, pay_options)?;
+
+                Ok(Order {
+                    uuid,
+                    auth_token,
+                })
+            },
+            OrderResponse::Error {
+                message,
+                errors,
+            } => {
+                Err(Error::ApiUsageError(format!("{} ({:?})", message, errors)))
+            },
+        }
+    }
 }
 
 #[derive(Debug)]
 pub enum Error {
     ApiError(reqwest::Error),
+    ApiUsageError(String),
+    FileNameError,
+    FileOpenError(std::io::Error),
     LightningError(clightningrpc::Error),
 }
 
@@ -106,6 +204,12 @@ impl From<clightningrpc::Error> for Error {
 impl From<reqwest::Error> for Error {
     fn from(e: reqwest::Error) -> Self {
         Error::ApiError(e)
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self {
+        Error::FileOpenError(e)
     }
 }
 
