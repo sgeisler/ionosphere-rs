@@ -2,6 +2,8 @@
 name = "ionosphere"
 version = "0.1.0"
 authors = ["Sebastian Geisler <sebastian@blockstream.io>"]
+description = "Library to interact with the Blockstream satellite API"
+license = "MIT"
 
 [dependencies]
 clightningrpc = "0.1.0"

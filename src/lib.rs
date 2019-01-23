@@ -237,7 +237,7 @@ impl IonosphereClient {
             .expect("should always work if endpoint is valid");
 
         // TODO: check HTTP status code for all functions
-        let response = self.client.delete(url)
+        self.client.delete(url)
             .header("X-Auth-Token", order.auth_token.clone())
             .send()?;
 
