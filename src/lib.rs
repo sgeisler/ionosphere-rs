@@ -184,6 +184,20 @@ impl IonosphereClient {
             },
         }
     }
+
+    pub fn delete_bid(&self, order: &Order) -> Result<(), Error> {
+        let url = self.endpoint.join("order/")
+            .expect("should always work if endpoint is valid")
+            .join(&order.uuid)
+            .expect("should always work if endpoint is valid");
+
+        // TODO: check HTTP status code for all functions
+        let response = self.client.delete(url)
+            .header("X-Auth-Token", order.auth_token.clone())
+            .send()?;
+
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
