@@ -25,6 +25,7 @@
 
 
 extern crate clightningrpc;
+extern crate lightning_invoice as bolt11;
 extern crate reqwest;
 extern crate serde;
 #[macro_use]
@@ -209,7 +210,15 @@ impl IonosphereClient {
                     maxdelay: None
                 };
 
-                // FIXME: instead of blindly trusting the invoice, check amount
+                let invoice: bolt11::Invoice = match payreq.parse() {
+                    Ok(x) => x,
+                    Err(_) => return Err(Error::ApiResponseError),
+                };
+
+                if invoice.amount_pico_btc() != Some(bid_msat * 10) {
+                    return Err(Error::ApiResponseError);
+                }
+
                 self.ligthningd.pay(payreq, pay_options)?;
 
                 Ok(Order {
@@ -249,6 +258,7 @@ impl IonosphereClient {
 pub enum Error {
     ApiError(reqwest::Error),
     ApiUsageError(String),
+    ApiResponseError,
     FileNameError,
     FileOpenError(std::io::Error),
     LightningError(clightningrpc::Error),
