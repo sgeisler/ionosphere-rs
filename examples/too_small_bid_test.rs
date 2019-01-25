@@ -8,7 +8,7 @@ fn main() {
         Path::new("/home/user/.lightning/lightning-rpc")
     );
 
-    match client.place_bid("src/bin/lipsum.txt", 1000) {
+    match client.place_bid("examples/lipsum.txt", 1000) {
         Ok(_) => unreachable!(),
         Err(e) => {
             println!("{:?}", e);

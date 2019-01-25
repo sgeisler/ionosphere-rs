@@ -8,6 +8,6 @@ fn main() {
         Path::new("/home/user/.lightning/lightning-rpc")
     );
 
-    let order = client.place_bid("src/bin/lipsum.txt", 100000).unwrap();
+    let order = client.place_bid("examples/lipsum.txt", 100000).unwrap();
     client.delete_bid(&order).unwrap();
 }
