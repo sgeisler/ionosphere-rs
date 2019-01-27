@@ -11,7 +11,7 @@
 //!
 //! ```
 //! let mut client = IonosphereClient::new_blockstream_client(
-//!     Path::new("/home/user/.lightning/lightning-rpc")
+//!     &"/home/user/.lightning/lightning-rpc"
 //! );
 //!
 //! // Open direct lightning channel to API node
@@ -106,16 +106,16 @@ pub struct Order {
 
 impl IonosphereClient {
     /// Creates a new API client for an arbitrary endpoint
-    pub fn new(api_endpoint: Url, lightning_rpc: &Path) -> IonosphereClient {
+    pub fn new<P: AsRef<Path>>(api_endpoint: Url, lightning_rpc: P) -> IonosphereClient {
         IonosphereClient {
             client: reqwest::Client::new(),
             endpoint: api_endpoint,
-            ligthningd: LightningRPC::new(lightning_rpc),
+            ligthningd: LightningRPC::new(lightning_rpc.as_ref()),
         }
     }
 
     /// Creates a new API client for the Blockstream API endpoint
-    pub fn new_blockstream_client(lightning_rpc: &Path) -> IonosphereClient {
+    pub fn new_blockstream_client<P: AsRef<Path>>(lightning_rpc: P) -> IonosphereClient {
         IonosphereClient::new(
             BLOCKSTREAM_ENDPOINT.parse().expect("hardcoded URL is valid"),
             lightning_rpc
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn test_lightning_node() {
-        let client = IonosphereClient::new_blockstream_client("".parse().unwrap());
+        let client = IonosphereClient::new_blockstream_client(&"");
         client.lightning_node().unwrap();
         assert!(client.lightning_node().is_ok());
     }

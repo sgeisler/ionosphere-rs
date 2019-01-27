@@ -1,6 +1,6 @@
 [package]
 name = "ionosphere"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Sebastian Geisler <sebastian@blockstream.io>"]
 description = "Library to interact with the Blockstream satellite API"
 license = "MIT"
