@@ -170,7 +170,8 @@ impl IonosphereClient {
         )
     }
 
-    /// Places a bid for arbitrary data supplied by a reader
+    /// Places a bid for arbitrary data supplied by a reader. If the payment fails we try to delete
+    /// the bid.
     pub fn place_bid_reader<T: Read + Send + 'static>(
         &mut self,
         data: T,
@@ -219,7 +220,16 @@ impl IonosphereClient {
                     return Err(Error::ApiResponseError);
                 }
 
-                self.ligthningd.pay(payreq, pay_options)?;
+                match self.ligthningd.pay(payreq, pay_options) {
+                    Ok(_) => {},
+                    Err(e) => {
+                        self.delete_bid(&Order {
+                            uuid,
+                            auth_token,
+                        })?;
+                        return Err(e.into());
+                    }
+                }
 
                 Ok(Order {
                     uuid,
